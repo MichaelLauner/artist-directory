@@ -38,6 +38,9 @@ class QueryManager implements Service {
 				),
 			)
 		);
+		$query->set( 'posts_per_page', -1 );
+		$query->set( 'orderby', 'title' );
+		$query->set( 'order', 'ASC' );
 
 		$media_filters = $this->getMediaFilters();
 		if ( ! empty( $media_filters ) ) {

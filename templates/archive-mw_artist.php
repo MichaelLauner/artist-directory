@@ -3,11 +3,15 @@ defined( 'ABSPATH' ) || exit;
 
 use DirectoryCore\Integration\CoreApi;
 
+global $wp_query;
+
 $selected_media = $_GET['media'] ?? array();
 if ( is_string( $selected_media ) ) {
 	$selected_media = explode( ',', $selected_media );
 }
 $selected_media = is_array( $selected_media ) ? array_values( array_filter( array_map( 'sanitize_title', array_map( 'wp_unslash', $selected_media ) ) ) ) : array();
+$current_view   = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'cards';
+$current_view   = in_array( $current_view, array( 'cards', 'text' ), true ) ? $current_view : 'cards';
 $media_terms    = get_terms(
 	array(
 		'taxonomy'   => 'mw_media',
@@ -16,21 +20,65 @@ $media_terms    = get_terms(
 		'order'      => 'ASC',
 	)
 );
+$archive_url    = (string) get_post_type_archive_link( 'mw_artist' );
+$toggle_params  = array();
+if ( ! empty( $selected_media ) ) {
+	$toggle_params['media'] = $selected_media;
+}
+$cards_url = add_query_arg( array_merge( $toggle_params, array( 'view' => 'cards' ) ), $archive_url );
+$text_url  = add_query_arg( array_merge( $toggle_params, array( 'view' => 'text' ) ), $archive_url );
+$artists   = array();
+
+foreach ( $wp_query->posts as $artist_post ) {
+	$artist_id   = (int) $artist_post->ID;
+	$media_names = wp_get_post_terms( $artist_id, 'mw_media', array( 'fields' => 'names' ) );
+	$artists[]   = array(
+		'id'         => $artist_id,
+		'name'       => CoreApi::getArtistDisplayName( $artist_id ),
+		'sort_name'  => CoreApi::getArtistSortName( $artist_id ),
+		'initial'    => CoreApi::getArtistSortInitial( $artist_id ),
+		'media'      => is_array( $media_names ) ? $media_names : array(),
+		'can_view'   => CoreApi::isArtistPubliclyViewable( $artist_id ),
+		'url'        => get_permalink( $artist_id ),
+		'image_html' => get_the_post_thumbnail( $artist_id, 'large' ),
+	);
+}
+
+usort(
+	$artists,
+	static function ( array $a, array $b ): int {
+		$sort = strcasecmp( $a['sort_name'], $b['sort_name'] );
+		return 0 !== $sort ? $sort : strcasecmp( $a['name'], $b['name'] );
+	}
+);
+
+$artist_groups = array();
+foreach ( $artists as $artist ) {
+	$artist_groups[ $artist['initial'] ][] = $artist;
+}
+ksort( $artist_groups );
 
 get_header();
 ?>
-<main class="artist-directory artist-directory--archive">
+<main class="artist-directory artist-directory--archive artist-directory--view-<?php echo esc_attr( $current_view ); ?>">
 	<section class="artist-directory__hero">
 		<div class="artist-directory__inner">
 			<p class="artist-directory__eyebrow"><?php esc_html_e( 'Artist Directory', 'artist-directory' ); ?></p>
 			<h1 class="artist-directory__title"><?php post_type_archive_title(); ?></h1>
-			<p class="artist-directory__intro"><?php esc_html_e( 'A public-facing roster of artists managed through a reusable directory system. Filter by media to narrow the list.', 'artist-directory' ); ?></p>
+			<p class="artist-directory__intro"><?php esc_html_e( 'A public-facing roster of artists managed through a reusable directory system. Filter by media or switch views to browse visually or alphabetically.', 'artist-directory' ); ?></p>
 		</div>
 	</section>
 
 	<section class="artist-directory__filters">
 		<div class="artist-directory__inner">
 			<form method="get" class="artist-directory__filter-form">
+				<input type="hidden" name="view" value="<?php echo esc_attr( $current_view ); ?>">
+				<div class="artist-directory__toolbar">
+					<div class="artist-directory__view-toggle" aria-label="<?php esc_attr_e( 'Directory view', 'artist-directory' ); ?>">
+						<a class="<?php echo 'cards' === $current_view ? 'is-active' : ''; ?>" href="<?php echo esc_url( $cards_url ); ?>"><?php esc_html_e( 'Cards', 'artist-directory' ); ?></a>
+						<a class="<?php echo 'text' === $current_view ? 'is-active' : ''; ?>" href="<?php echo esc_url( $text_url ); ?>"><?php esc_html_e( 'Text', 'artist-directory' ); ?></a>
+					</div>
+				</div>
 				<div class="artist-directory__filter-row">
 					<span class="artist-directory__filter-label"><?php esc_html_e( 'Filter by media', 'artist-directory' ); ?></span>
 					<div class="artist-directory__chips">
@@ -46,7 +94,7 @@ get_header();
 				</div>
 				<div class="artist-directory__filter-actions">
 					<button type="submit" class="artist-directory__button artist-directory__button--solid"><?php esc_html_e( 'Apply Filters', 'artist-directory' ); ?></button>
-					<a href="<?php echo esc_url( get_post_type_archive_link( 'mw_artist' ) ); ?>" class="artist-directory__button artist-directory__button--ghost"><?php esc_html_e( 'Reset', 'artist-directory' ); ?></a>
+					<a href="<?php echo esc_url( $archive_url ); ?>" class="artist-directory__button artist-directory__button--ghost"><?php esc_html_e( 'Reset', 'artist-directory' ); ?></a>
 				</div>
 			</form>
 		</div>
@@ -54,60 +102,48 @@ get_header();
 
 	<section class="artist-directory__results">
 		<div class="artist-directory__inner">
-			<?php if ( have_posts() ) : ?>
-				<div class="artist-directory__grid">
-					<?php while ( have_posts() ) : ?>
-						<?php the_post(); ?>
-						<?php
-						$artist_id   = get_the_ID();
-						$media_names = wp_get_post_terms( $artist_id, 'mw_media', array( 'fields' => 'names' ) );
-						$can_view    = CoreApi::isArtistPubliclyViewable( $artist_id );
-						?>
-						<article <?php post_class( 'artist-card' ); ?>>
-							<div class="artist-card__media">
-								<?php if ( has_post_thumbnail() ) : ?>
-									<?php the_post_thumbnail( 'large' ); ?>
-								<?php else : ?>
-									<div class="artist-card__placeholder"></div>
-								<?php endif; ?>
-							</div>
-							<div class="artist-card__body">
-								<p class="artist-card__kicker"><?php esc_html_e( 'Directory Listing', 'artist-directory' ); ?></p>
-								<h2 class="artist-card__title">
-									<?php if ( $can_view ) : ?>
-										<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
+			<?php if ( ! empty( $artists ) ) : ?>
+				<?php if ( 'text' === $current_view ) : ?>
+					<div class="artist-directory__text-list">
+						<?php foreach ( $artist_groups as $initial => $group_artists ) : ?>
+							<section class="artist-directory__letter-group">
+								<h2><?php echo esc_html( $initial ); ?></h2>
+								<ul>
+									<?php foreach ( $group_artists as $artist ) : ?>
+										<li>
+											<?php if ( $artist['can_view'] ) : ?>
+												<a href="<?php echo esc_url( $artist['url'] ); ?>"><?php echo esc_html( $artist['name'] ); ?></a>
+											<?php else : ?>
+												<span><?php echo esc_html( $artist['name'] ); ?></span>
+											<?php endif; ?>
+										</li>
+									<?php endforeach; ?>
+								</ul>
+							</section>
+						<?php endforeach; ?>
+					</div>
+				<?php else : ?>
+					<div class="artist-directory__grid">
+						<?php foreach ( $artists as $artist ) : ?>
+							<?php $tag_name = $artist['can_view'] ? 'a' : 'article'; ?>
+							<<?php echo esc_html( $tag_name ); ?> class="artist-card <?php echo $artist['can_view'] ? 'artist-card--link' : 'artist-card--static'; ?>" <?php echo $artist['can_view'] ? 'href="' . esc_url( $artist['url'] ) . '"' : ''; ?>>
+								<div class="artist-card__media">
+									<?php if ( $artist['image_html'] ) : ?>
+										<?php echo $artist['image_html']; ?>
 									<?php else : ?>
-										<?php the_title(); ?>
-									<?php endif; ?>
-								</h2>
-								<?php if ( ! empty( $media_names ) ) : ?>
-									<p class="artist-card__meta"><?php echo esc_html( implode( ' / ', $media_names ) ); ?></p>
-								<?php endif; ?>
-								<div class="artist-card__excerpt"><?php echo esc_html( wp_trim_words( get_the_excerpt(), 28 ) ); ?></div>
-								<div class="artist-card__footer">
-									<?php if ( $can_view ) : ?>
-										<a href="<?php the_permalink(); ?>" class="artist-directory__button artist-directory__button--solid"><?php esc_html_e( 'View Profile', 'artist-directory' ); ?></a>
-									<?php else : ?>
-										<span class="artist-card__state"><?php esc_html_e( 'Public listing only', 'artist-directory' ); ?></span>
+										<div class="artist-card__placeholder"></div>
 									<?php endif; ?>
 								</div>
-							</div>
-						</article>
-					<?php endwhile; ?>
-				</div>
-
-				<div class="artist-directory__pagination">
-					<?php
-					echo wp_kses_post(
-						paginate_links(
-							array(
-								'prev_text' => __( 'Previous', 'artist-directory' ),
-								'next_text' => __( 'Next', 'artist-directory' ),
-							)
-						)
-					);
-					?>
-				</div>
+								<div class="artist-card__body">
+									<h2 class="artist-card__title"><?php echo esc_html( $artist['name'] ); ?></h2>
+									<?php if ( ! empty( $artist['media'] ) ) : ?>
+										<p class="artist-card__meta"><?php echo esc_html( implode( ' / ', $artist['media'] ) ); ?></p>
+									<?php endif; ?>
+								</div>
+							</<?php echo esc_html( $tag_name ); ?>>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
 			<?php else : ?>
 				<div class="artist-directory__empty">
 					<h2><?php esc_html_e( 'No artists match those filters.', 'artist-directory' ); ?></h2>
