@@ -168,10 +168,8 @@
 }
 
 .artist-card {
-	display: flex;
-	flex-direction: column;
-	justify-content: flex-end;
-	min-height: 25rem;
+	display: grid;
+	grid-template-rows: 18rem auto;
 	color: var(--ad-ink);
 	text-decoration: none;
 	border-top: 1px solid var(--ad-border);
@@ -192,7 +190,6 @@
 	align-items: flex-end;
 	justify-content: center;
 	width: 100%;
-	margin-top: auto;
 	overflow: hidden;
 }
 
