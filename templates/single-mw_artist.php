@@ -47,7 +47,7 @@ if ( $featured_id > 0 ) {
 				<aside class="artist-profile__sidebar">
 					<?php if ( ! empty( $related_venue_ids ) ) : ?>
 						<section class="artist-profile__panel">
-							<h2><?php esc_html_e( 'Related Venues', 'artist-directory' ); ?></h2>
+							<h3 class="artist-profile__panel-title"><?php esc_html_e( 'Related Venues', 'artist-directory' ); ?></h3>
 							<ul>
 								<?php foreach ( $related_venue_ids as $venue_id ) : ?>
 									<li><?php echo esc_html( get_the_title( $venue_id ) ); ?></li>

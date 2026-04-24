@@ -26,6 +26,16 @@ class AssetManager implements Service {
 			array(),
 			$this->context->version()
 		);
+
+		if ( $this->isArtistArchiveRequest() ) {
+			wp_enqueue_script(
+				'artist-directory',
+				$this->context->assetUrl( 'assets/js/artist-directory.js' ),
+				array(),
+				$this->context->version(),
+				true
+			);
+		}
 	}
 
 	private function isArtistArchiveRequest(): bool {

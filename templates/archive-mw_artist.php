@@ -93,7 +93,6 @@ get_header();
 					</div>
 				</div>
 				<div class="artist-directory__filter-actions">
-					<button type="submit" class="artist-directory__button artist-directory__button--solid"><?php esc_html_e( 'Apply Filters', 'artist-directory' ); ?></button>
 					<a href="<?php echo esc_url( $archive_url ); ?>" class="artist-directory__button artist-directory__button--ghost"><?php esc_html_e( 'Reset', 'artist-directory' ); ?></a>
 				</div>
 			</form>

@@ -141,7 +141,6 @@ class ThemeBridge implements Service {
 						</div>
 					</div>
 					<div class="artist-directory__filter-actions">
-						<button type="submit" class="artist-directory__button artist-directory__button--solid"><?php esc_html_e( 'Apply Filters', 'artist-directory' ); ?></button>
 						<a href="<?php echo esc_url( $archive_url ); ?>" class="artist-directory__button artist-directory__button--ghost"><?php esc_html_e( 'Reset', 'artist-directory' ); ?></a>
 					</div>
 				</form>
@@ -236,7 +235,7 @@ class ThemeBridge implements Service {
 					<aside class="artist-profile__sidebar">
 						<?php if ( ! empty( $related_venue_ids ) ) : ?>
 							<section class="artist-profile__panel">
-								<h2><?php esc_html_e( 'Related Venues', 'artist-directory' ); ?></h2>
+								<h3 class="artist-profile__panel-title"><?php esc_html_e( 'Related Venues', 'artist-directory' ); ?></h3>
 								<ul>
 									<?php foreach ( $related_venue_ids as $venue_id ) : ?>
 										<li><?php echo esc_html( get_the_title( $venue_id ) ); ?></li>
