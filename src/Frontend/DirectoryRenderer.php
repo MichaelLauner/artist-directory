@@ -1,0 +1,226 @@
+<?php
+namespace ArtistDirectory\Frontend;
+
+use ArtistDirectory\Settings\DirectorySettings;
+use DirectoryCore\Integration\CoreApi;
+use WP_Query;
+
+class DirectoryRenderer {
+	public function render( ?WP_Query $query = null, ?string $base_url = null ): string {
+		$query          = $query ?: $this->buildArtistQuery();
+		$base_url       = $base_url ?: DirectorySettings::getDirectoryUrl();
+		$selected_media = $this->getSelectedMedia();
+		$current_view   = $this->getCurrentView();
+		$media_terms    = get_terms(
+			array(
+				'taxonomy'   => 'mw_media',
+				'hide_empty' => false,
+				'orderby'    => 'name',
+				'order'      => 'ASC',
+			)
+		);
+		$toggle_params  = array();
+
+		if ( ! empty( $selected_media ) ) {
+			$toggle_params['media'] = $selected_media;
+		}
+
+		$cards_url     = add_query_arg( array_merge( $toggle_params, array( 'view' => 'cards' ) ), $base_url );
+		$text_url      = add_query_arg( array_merge( $toggle_params, array( 'view' => 'text' ) ), $base_url );
+		$artists       = $this->buildArtists( $query );
+		$artist_groups = $this->groupArtists( $artists );
+
+		ob_start();
+		?>
+		<div class="artist-directory artist-directory--archive artist-directory--view-<?php echo esc_attr( $current_view ); ?>">
+			<section class="artist-directory__filters">
+				<div class="artist-directory__inner">
+					<form method="get" class="artist-directory__filter-form">
+						<input type="hidden" name="view" value="<?php echo esc_attr( $current_view ); ?>">
+						<div class="artist-directory__toolbar">
+							<div class="artist-directory__view-toggle" aria-label="<?php esc_attr_e( 'Directory view', 'artist-directory' ); ?>">
+								<a class="<?php echo 'cards' === $current_view ? 'is-active' : ''; ?>" href="<?php echo esc_url( $cards_url ); ?>"><?php esc_html_e( 'Cards', 'artist-directory' ); ?></a>
+								<a class="<?php echo 'text' === $current_view ? 'is-active' : ''; ?>" href="<?php echo esc_url( $text_url ); ?>"><?php esc_html_e( 'Text', 'artist-directory' ); ?></a>
+							</div>
+						</div>
+						<div class="artist-directory__filter-row">
+							<span class="artist-directory__filter-label"><?php esc_html_e( 'Filter by media', 'artist-directory' ); ?></span>
+							<div class="artist-directory__chips">
+								<?php if ( is_array( $media_terms ) ) : ?>
+									<?php foreach ( $media_terms as $media_term ) : ?>
+										<label class="artist-directory__chip">
+											<input type="checkbox" name="media[]" value="<?php echo esc_attr( $media_term->slug ); ?>" <?php checked( in_array( $media_term->slug, $selected_media, true ), true ); ?>>
+											<span><?php echo esc_html( $media_term->name ); ?></span>
+										</label>
+									<?php endforeach; ?>
+								<?php endif; ?>
+							</div>
+						</div>
+						<div class="artist-directory__filter-actions">
+							<a href="<?php echo esc_url( $base_url ); ?>" class="artist-directory__button artist-directory__button--ghost"><?php esc_html_e( 'Reset', 'artist-directory' ); ?></a>
+						</div>
+					</form>
+				</div>
+			</section>
+
+			<section class="artist-directory__results">
+				<div class="artist-directory__inner">
+					<?php if ( ! empty( $artists ) ) : ?>
+						<?php if ( 'text' === $current_view ) : ?>
+							<div class="artist-directory__text-list">
+								<?php foreach ( $artist_groups as $initial => $group_artists ) : ?>
+									<section class="artist-directory__letter-group">
+										<h2><?php echo esc_html( $initial ); ?></h2>
+										<ul>
+											<?php foreach ( $group_artists as $artist ) : ?>
+												<li>
+													<?php if ( $artist['can_view'] ) : ?>
+														<a href="<?php echo esc_url( $artist['url'] ); ?>"><?php echo esc_html( $artist['name'] ); ?></a>
+													<?php else : ?>
+														<span><?php echo esc_html( $artist['name'] ); ?></span>
+													<?php endif; ?>
+												</li>
+											<?php endforeach; ?>
+										</ul>
+									</section>
+								<?php endforeach; ?>
+							</div>
+						<?php else : ?>
+							<div class="artist-directory__grid">
+								<?php foreach ( $artists as $artist ) : ?>
+									<?php $tag_name = $artist['can_view'] ? 'a' : 'article'; ?>
+									<<?php echo esc_html( $tag_name ); ?> class="artist-card <?php echo $artist['can_view'] ? 'artist-card--link' : 'artist-card--static'; ?>" <?php echo $artist['can_view'] ? 'href="' . esc_url( $artist['url'] ) . '"' : ''; ?>>
+										<div class="artist-card__media">
+											<?php if ( $artist['image_html'] ) : ?>
+												<?php echo $artist['image_html']; ?>
+											<?php else : ?>
+												<div class="artist-card__placeholder"></div>
+											<?php endif; ?>
+										</div>
+										<div class="artist-card__body">
+											<h2 class="artist-card__title"><?php echo esc_html( $artist['name'] ); ?></h2>
+											<?php if ( ! empty( $artist['media'] ) ) : ?>
+												<p class="artist-card__meta"><?php echo esc_html( implode( ' / ', $artist['media'] ) ); ?></p>
+											<?php endif; ?>
+										</div>
+									</<?php echo esc_html( $tag_name ); ?>>
+								<?php endforeach; ?>
+							</div>
+						<?php endif; ?>
+					<?php else : ?>
+						<div class="artist-directory__empty">
+							<h2><?php esc_html_e( 'No artists match those filters.', 'artist-directory' ); ?></h2>
+							<p><?php esc_html_e( 'Try removing one or more filters to broaden the directory results.', 'artist-directory' ); ?></p>
+						</div>
+					<?php endif; ?>
+				</div>
+			</section>
+		</div>
+		<?php
+
+		return (string) ob_get_clean();
+	}
+
+	private function buildArtistQuery(): WP_Query {
+		$query_args = array(
+			'post_type'      => 'mw_artist',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'orderby'        => 'title',
+			'order'          => 'ASC',
+			'meta_query'     => array(
+				'relation' => 'OR',
+				array(
+					'key'     => 'mw_visibility_state',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => 'mw_visibility_state',
+					'value'   => array( 'directory', 'profile' ),
+					'compare' => 'IN',
+				),
+			),
+		);
+
+		$media_filters = $this->getSelectedMedia();
+		if ( ! empty( $media_filters ) ) {
+			$query_args['tax_query'] = array(
+				array(
+					'taxonomy' => 'mw_media',
+					'field'    => 'slug',
+					'terms'    => $media_filters,
+				),
+			);
+		}
+
+		return new WP_Query( $query_args );
+	}
+
+	private function buildArtists( WP_Query $query ): array {
+		$artists = array();
+
+		foreach ( $query->posts as $artist_post ) {
+			$artist_id   = (int) $artist_post->ID;
+			$media_names = wp_get_post_terms( $artist_id, 'mw_media', array( 'fields' => 'names' ) );
+			$artists[]   = array(
+				'id'         => $artist_id,
+				'name'       => CoreApi::getArtistDisplayName( $artist_id ),
+				'sort_name'  => CoreApi::getArtistSortName( $artist_id ),
+				'initial'    => CoreApi::getArtistSortInitial( $artist_id ),
+				'media'      => is_array( $media_names ) ? $media_names : array(),
+				'can_view'   => CoreApi::isArtistPubliclyViewable( $artist_id ),
+				'url'        => get_permalink( $artist_id ),
+				'image_html' => get_the_post_thumbnail( $artist_id, 'large' ),
+			);
+		}
+
+		usort(
+			$artists,
+			static function ( array $a, array $b ): int {
+				$sort = strcasecmp( $a['sort_name'], $b['sort_name'] );
+				return 0 !== $sort ? $sort : strcasecmp( $a['name'], $b['name'] );
+			}
+		);
+
+		return $artists;
+	}
+
+	private function groupArtists( array $artists ): array {
+		$artist_groups = array();
+
+		foreach ( $artists as $artist ) {
+			$artist_groups[ $artist['initial'] ][] = $artist;
+		}
+
+		ksort( $artist_groups );
+
+		return $artist_groups;
+	}
+
+	private function getSelectedMedia(): array {
+		$raw_value = $_GET['media'] ?? array();
+
+		if ( is_string( $raw_value ) ) {
+			$raw_value = explode( ',', $raw_value );
+		}
+
+		if ( ! is_array( $raw_value ) ) {
+			return array();
+		}
+
+		return array_values(
+			array_filter(
+				array_map(
+					'sanitize_title',
+					array_map( 'wp_unslash', $raw_value )
+				)
+			)
+		);
+	}
+
+	private function getCurrentView(): string {
+		$current_view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'cards';
+
+		return in_array( $current_view, array( 'cards', 'text' ), true ) ? $current_view : 'cards';
+	}
+}

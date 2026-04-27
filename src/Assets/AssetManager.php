@@ -3,6 +3,7 @@ namespace ArtistDirectory\Assets;
 
 use ArtistDirectory\Contracts\Service;
 use ArtistDirectory\Infrastructure\PluginContext;
+use ArtistDirectory\Settings\DirectorySettings;
 
 class AssetManager implements Service {
 	private PluginContext $context;
@@ -16,7 +17,7 @@ class AssetManager implements Service {
 	}
 
 	public function enqueueAssets(): void {
-		if ( ! $this->isArtistArchiveRequest() && ! is_singular( 'mw_artist' ) ) {
+		if ( ! $this->isArtistArchiveRequest() && ! $this->isDirectoryPageRequest() && ! is_singular( 'mw_artist' ) ) {
 			return;
 		}
 
@@ -27,7 +28,7 @@ class AssetManager implements Service {
 			$this->context->version()
 		);
 
-		if ( $this->isArtistArchiveRequest() ) {
+		if ( $this->isArtistArchiveRequest() || $this->isDirectoryPageRequest() ) {
 			wp_enqueue_script(
 				'artist-directory',
 				$this->context->assetUrl( 'assets/js/artist-directory.js' ),
@@ -62,5 +63,11 @@ class AssetManager implements Service {
 		$archive_path = wp_parse_url( (string) get_post_type_archive_link( 'mw_artist' ), PHP_URL_PATH );
 
 		return ! empty( $request_path ) && ! empty( $archive_path ) && trailingslashit( $request_path ) === trailingslashit( $archive_path );
+	}
+
+	private function isDirectoryPageRequest(): bool {
+		$page_id = DirectorySettings::getDirectoryPageId();
+
+		return $page_id > 0 && is_singular( 'page' ) && (int) get_queried_object_id() === $page_id;
 	}
 }
