@@ -30,6 +30,26 @@ class SettingsPage implements Service {
 				'default'           => 0,
 			)
 		);
+
+		register_setting(
+			'artist_directory_settings',
+			DirectorySettings::OPTION_STYLE_MODE,
+			array(
+				'type'              => 'string',
+				'sanitize_callback' => array( DirectorySettings::class, 'sanitizeStyleMode' ),
+				'default'           => 'light',
+			)
+		);
+
+		register_setting(
+			'artist_directory_settings',
+			DirectorySettings::OPTION_DEFAULT_VIEW,
+			array(
+				'type'              => 'string',
+				'sanitize_callback' => array( DirectorySettings::class, 'sanitizeDefaultView' ),
+				'default'           => 'cards',
+			)
+		);
 	}
 
 	public function registerMenuPage(): void {
@@ -46,6 +66,8 @@ class SettingsPage implements Service {
 	public function renderSettingsPage(): void {
 		$selected_page_id = DirectorySettings::getDirectoryPageId();
 		$directory_url    = DirectorySettings::getDirectoryUrl();
+		$style_mode       = DirectorySettings::getStyleMode();
+		$default_view     = DirectorySettings::getDefaultView();
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Artist Directory Settings', $this->context->textDomain() ); ?></h1>
@@ -80,6 +102,38 @@ class SettingsPage implements Service {
 									</a>
 								</p>
 							<?php endif; ?>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">
+							<label for="<?php echo esc_attr( DirectorySettings::OPTION_STYLE_MODE ); ?>">
+								<?php esc_html_e( 'Directory style', $this->context->textDomain() ); ?>
+							</label>
+						</th>
+						<td>
+							<select name="<?php echo esc_attr( DirectorySettings::OPTION_STYLE_MODE ); ?>" id="<?php echo esc_attr( DirectorySettings::OPTION_STYLE_MODE ); ?>">
+								<option value="light" <?php selected( $style_mode, 'light' ); ?>><?php esc_html_e( 'Light', $this->context->textDomain() ); ?></option>
+								<option value="dark" <?php selected( $style_mode, 'dark' ); ?>><?php esc_html_e( 'Dark', $this->context->textDomain() ); ?></option>
+							</select>
+							<p class="description">
+								<?php esc_html_e( 'Light is the default public style. Dark keeps the original high-contrast directory treatment available.', $this->context->textDomain() ); ?>
+							</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">
+							<label for="<?php echo esc_attr( DirectorySettings::OPTION_DEFAULT_VIEW ); ?>">
+								<?php esc_html_e( 'Default view', $this->context->textDomain() ); ?>
+							</label>
+						</th>
+						<td>
+							<select name="<?php echo esc_attr( DirectorySettings::OPTION_DEFAULT_VIEW ); ?>" id="<?php echo esc_attr( DirectorySettings::OPTION_DEFAULT_VIEW ); ?>">
+								<option value="cards" <?php selected( $default_view, 'cards' ); ?>><?php esc_html_e( 'Cards', $this->context->textDomain() ); ?></option>
+								<option value="text" <?php selected( $default_view, 'text' ); ?>><?php esc_html_e( 'List', $this->context->textDomain() ); ?></option>
+							</select>
+							<p class="description">
+								<?php esc_html_e( 'Choose which view visitors see first when the URL does not include a view parameter.', $this->context->textDomain() ); ?>
+							</p>
 						</td>
 					</tr>
 				</table>

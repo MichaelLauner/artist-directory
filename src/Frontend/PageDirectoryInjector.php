@@ -28,6 +28,10 @@ class PageDirectoryInjector implements Service {
 			return $content;
 		}
 
+		if ( has_block( 'artist-directory/directory', get_queried_object_id() ) ) {
+			return $content;
+		}
+
 		return $content . $this->renderer->render( null, (string) get_permalink( $page_id ) );
 	}
 }

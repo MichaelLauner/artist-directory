@@ -1,0 +1,22 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "artist-directory/directory",
+	"title": "Artist Directory",
+	"category": "widgets",
+	"icon": "groups",
+	"description": "Display the public artist directory with filters and view toggles.",
+	"textdomain": "artist-directory",
+	"supports": {
+		"align": [
+			"wide",
+			"full"
+		],
+		"html": false
+	},
+	"attributes": {
+		"align": {
+			"type": "string"
+		}
+	}
+}

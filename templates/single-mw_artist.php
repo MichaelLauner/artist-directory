@@ -2,8 +2,26 @@
 defined( 'ABSPATH' ) || exit;
 
 use DirectoryCore\Integration\CoreApi;
+use ArtistDirectory\Settings\DirectorySettings;
 
-get_header();
+$is_block_theme = function_exists( 'wp_is_block_theme' ) && wp_is_block_theme();
+
+if ( $is_block_theme ) {
+	?>
+	<!doctype html>
+	<html <?php language_attributes(); ?>>
+	<head>
+		<meta charset="<?php bloginfo( 'charset' ); ?>">
+		<?php wp_head(); ?>
+	</head>
+	<body <?php body_class(); ?>>
+	<?php wp_body_open(); ?>
+	<div class="wp-site-blocks">
+		<?php echo do_blocks( '<!-- wp:template-part {"slug":"header"} /-->' ); ?>
+	<?php
+} else {
+	get_header();
+}
 
 the_post();
 
@@ -12,15 +30,16 @@ $media_names        = wp_get_post_terms( $artist_id, 'mw_media', array( 'fields'
 $related_venue_ids  = CoreApi::sanitizeIdList( get_post_meta( $artist_id, 'mw_related_venue_ids', true ) );
 $profile_artwork_ids = CoreApi::sanitizeIdList( get_post_meta( $artist_id, 'mw_profile_artwork_ids', true ) );
 $featured_id        = (int) get_post_thumbnail_id( $artist_id );
+$directory_url      = DirectorySettings::getDirectoryUrl();
 
 if ( $featured_id > 0 ) {
 	$profile_artwork_ids = array_values( array_diff( $profile_artwork_ids, array( $featured_id ) ) );
 }
 ?>
-<main class="artist-directory artist-directory--single">
+<main class="artist-directory artist-directory--single <?php echo esc_attr( DirectorySettings::getThemeClass() ); ?>">
 	<div class="artist-directory__inner">
 		<nav class="artist-directory__breadcrumbs">
-			<a href="<?php echo esc_url( get_post_type_archive_link( 'mw_artist' ) ); ?>"><?php esc_html_e( 'Artist Directory', 'artist-directory' ); ?></a>
+			<a href="<?php echo esc_url( $directory_url ); ?>"><?php esc_html_e( 'Artist Directory', 'artist-directory' ); ?></a>
 		</nav>
 
 		<article <?php post_class( 'artist-profile' ); ?>>
@@ -75,4 +94,14 @@ if ( $featured_id > 0 ) {
 	</div>
 </main>
 <?php
-get_footer();
+if ( $is_block_theme ) {
+	echo do_blocks( '<!-- wp:template-part {"slug":"footer"} /-->' );
+	?>
+	</div>
+	<?php wp_footer(); ?>
+	</body>
+	</html>
+	<?php
+} else {
+	get_footer();
+}

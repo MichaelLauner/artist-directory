@@ -4,6 +4,7 @@ namespace ArtistDirectory;
 use ArtistDirectory\Admin\DependencyNotice;
 use ArtistDirectory\Admin\SettingsPage;
 use ArtistDirectory\Assets\AssetManager;
+use ArtistDirectory\Block\DirectoryBlock;
 use ArtistDirectory\Contracts\Service;
 use ArtistDirectory\Frontend\DirectoryRenderer;
 use ArtistDirectory\Frontend\PageDirectoryInjector;
@@ -44,6 +45,7 @@ class Plugin {
 			TemplateLoader::class        => new TemplateLoader( $this->context ),
 			ThemeBridge::class           => new ThemeBridge( $this->context ),
 			PageDirectoryInjector::class => new PageDirectoryInjector( $this->context, $directory_renderer ),
+			DirectoryBlock::class        => new DirectoryBlock( $this->context, $directory_renderer ),
 			AssetManager::class          => new AssetManager( $this->context ),
 		);
 	}

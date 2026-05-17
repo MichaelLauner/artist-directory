@@ -27,37 +27,63 @@ class DirectoryRenderer {
 
 		$cards_url     = add_query_arg( array_merge( $toggle_params, array( 'view' => 'cards' ) ), $base_url );
 		$text_url      = add_query_arg( array_merge( $toggle_params, array( 'view' => 'text' ) ), $base_url );
+		$reset_url     = add_query_arg( array( 'view' => $current_view ), $base_url );
 		$artists       = $this->buildArtists( $query );
 		$artist_groups = $this->groupArtists( $artists );
 
 		ob_start();
 		?>
-		<div class="artist-directory artist-directory--archive artist-directory--view-<?php echo esc_attr( $current_view ); ?>">
+		<div class="artist-directory artist-directory--archive <?php echo esc_attr( DirectorySettings::getThemeClass() ); ?> artist-directory--view-<?php echo esc_attr( $current_view ); ?>">
 			<section class="artist-directory__filters">
 				<div class="artist-directory__inner">
 					<form method="get" class="artist-directory__filter-form">
 						<input type="hidden" name="view" value="<?php echo esc_attr( $current_view ); ?>">
 						<div class="artist-directory__toolbar">
-							<div class="artist-directory__view-toggle" aria-label="<?php esc_attr_e( 'Directory view', 'artist-directory' ); ?>">
-								<a class="<?php echo 'cards' === $current_view ? 'is-active' : ''; ?>" href="<?php echo esc_url( $cards_url ); ?>"><?php esc_html_e( 'Cards', 'artist-directory' ); ?></a>
-								<a class="<?php echo 'text' === $current_view ? 'is-active' : ''; ?>" href="<?php echo esc_url( $text_url ); ?>"><?php esc_html_e( 'Text', 'artist-directory' ); ?></a>
-							</div>
-						</div>
-						<div class="artist-directory__filter-row">
-							<span class="artist-directory__filter-label"><?php esc_html_e( 'Filter by media', 'artist-directory' ); ?></span>
-							<div class="artist-directory__chips">
-								<?php if ( is_array( $media_terms ) ) : ?>
-									<?php foreach ( $media_terms as $media_term ) : ?>
-										<label class="artist-directory__chip">
-											<input type="checkbox" name="media[]" value="<?php echo esc_attr( $media_term->slug ); ?>" <?php checked( in_array( $media_term->slug, $selected_media, true ), true ); ?>>
-											<span><?php echo esc_html( $media_term->name ); ?></span>
-										</label>
-									<?php endforeach; ?>
+							<div class="artist-directory__filter-controls">
+								<span class="artist-directory__filter-label"><?php esc_html_e( 'Filters', 'artist-directory' ); ?></span>
+								<details class="artist-directory__filter-menu">
+									<summary>
+										<span><?php esc_html_e( 'Media', 'artist-directory' ); ?></span>
+										<?php if ( ! empty( $selected_media ) ) : ?>
+											<small><?php echo esc_html( count( $selected_media ) ); ?></small>
+										<?php endif; ?>
+									</summary>
+									<div class="artist-directory__filter-popover">
+										<?php if ( is_array( $media_terms ) ) : ?>
+											<?php foreach ( $media_terms as $media_term ) : ?>
+												<label class="artist-directory__filter-option">
+													<input type="checkbox" name="media[]" value="<?php echo esc_attr( $media_term->slug ); ?>" <?php checked( in_array( $media_term->slug, $selected_media, true ), true ); ?>>
+													<span><?php echo esc_html( $media_term->name ); ?></span>
+												</label>
+											<?php endforeach; ?>
+										<?php endif; ?>
+									</div>
+								</details>
+								<?php if ( ! empty( $selected_media ) && is_array( $media_terms ) ) : ?>
+									<div class="artist-directory__active-filters" aria-label="<?php esc_attr_e( 'Active media filters', 'artist-directory' ); ?>">
+										<?php foreach ( $media_terms as $media_term ) : ?>
+											<?php if ( ! in_array( $media_term->slug, $selected_media, true ) ) : ?>
+												<?php continue; ?>
+											<?php endif; ?>
+											<?php $remaining_media = array_values( array_diff( $selected_media, array( $media_term->slug ) ) ); ?>
+											<?php $remove_url = empty( $remaining_media ) ? add_query_arg( array( 'view' => $current_view ), $base_url ) : add_query_arg( array( 'view' => $current_view, 'media' => $remaining_media ), $base_url ); ?>
+											<a class="artist-directory__active-chip" href="<?php echo esc_url( $remove_url ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Remove %s filter', 'artist-directory' ), $media_term->name ) ); ?>">
+												<span><?php echo esc_html( $media_term->name ); ?></span>
+												<span aria-hidden="true">x</span>
+											</a>
+										<?php endforeach; ?>
+									</div>
 								<?php endif; ?>
 							</div>
-						</div>
-						<div class="artist-directory__filter-actions">
-							<a href="<?php echo esc_url( $base_url ); ?>" class="artist-directory__button artist-directory__button--ghost"><?php esc_html_e( 'Reset', 'artist-directory' ); ?></a>
+							<div class="artist-directory__toolbar-actions">
+								<div class="artist-directory__view-toggle" aria-label="<?php esc_attr_e( 'Directory view', 'artist-directory' ); ?>">
+									<a class="<?php echo 'cards' === $current_view ? 'is-active' : ''; ?>" href="<?php echo esc_url( $cards_url ); ?>"><?php esc_html_e( 'Cards', 'artist-directory' ); ?></a>
+									<a class="<?php echo 'text' === $current_view ? 'is-active' : ''; ?>" href="<?php echo esc_url( $text_url ); ?>"><?php esc_html_e( 'Text', 'artist-directory' ); ?></a>
+								</div>
+								<?php if ( ! empty( $selected_media ) ) : ?>
+									<a href="<?php echo esc_url( $reset_url ); ?>" class="artist-directory__button artist-directory__button--ghost"><?php esc_html_e( 'Reset', 'artist-directory' ); ?></a>
+								<?php endif; ?>
+							</div>
 						</div>
 					</form>
 				</div>
@@ -73,12 +99,13 @@ class DirectoryRenderer {
 										<h2><?php echo esc_html( $initial ); ?></h2>
 										<ul>
 											<?php foreach ( $group_artists as $artist ) : ?>
-												<li>
+												<li class="artist-directory__text-item">
 													<?php if ( $artist['can_view'] ) : ?>
-														<a href="<?php echo esc_url( $artist['url'] ); ?>"><?php echo esc_html( $artist['name'] ); ?></a>
+														<a class="artist-directory__text-link" href="<?php echo esc_url( $artist['url'] ); ?>"><?php echo esc_html( $artist['name'] ); ?></a>
 													<?php else : ?>
-														<span><?php echo esc_html( $artist['name'] ); ?></span>
+														<span class="artist-directory__text-link" tabindex="0"><?php echo esc_html( $artist['name'] ); ?></span>
 													<?php endif; ?>
+													<?php echo $this->renderTextPreview( $artist ); ?>
 												</li>
 											<?php endforeach; ?>
 										</ul>
@@ -219,8 +246,31 @@ class DirectoryRenderer {
 	}
 
 	private function getCurrentView(): string {
-		$current_view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'cards';
+		$current_view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : DirectorySettings::getDefaultView();
 
-		return in_array( $current_view, array( 'cards', 'text' ), true ) ? $current_view : 'cards';
+		return in_array( $current_view, array( 'cards', 'text' ), true ) ? $current_view : DirectorySettings::getDefaultView();
+	}
+
+	private function renderTextPreview( array $artist ): string {
+		ob_start();
+		?>
+		<div class="artist-directory__text-preview" aria-hidden="true">
+			<div class="artist-directory__text-preview-media">
+				<?php if ( ! empty( $artist['image_html'] ) ) : ?>
+					<?php echo $artist['image_html']; ?>
+				<?php else : ?>
+					<div class="artist-card__placeholder"></div>
+				<?php endif; ?>
+			</div>
+			<div class="artist-directory__text-preview-body">
+				<strong><?php echo esc_html( $artist['name'] ); ?></strong>
+				<?php if ( ! empty( $artist['media'] ) ) : ?>
+					<span><?php echo esc_html( implode( ' / ', $artist['media'] ) ); ?></span>
+				<?php endif; ?>
+			</div>
+		</div>
+		<?php
+
+		return (string) ob_get_clean();
 	}
 }

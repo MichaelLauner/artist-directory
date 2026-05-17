@@ -3,7 +3,7 @@
  * Plugin Name: Artist Directory
  * Plugin URI:  https://mostlywanted.com/
  * Description: Public artist directory templates and filters powered by Directory Core, by Mostly Wanted.
- * Version:     0.1.0
+ * Version:     0.1.5
  * Requires at least: 6.4
  * Requires PHP: 7.4
  * Requires Plugins: directory-core
@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'ARTIST_DIRECTORY_VERSION', '0.1.0' );
+define( 'ARTIST_DIRECTORY_VERSION', '0.1.5' );
 define( 'ARTIST_DIRECTORY_TEXT_DOMAIN', 'artist-directory' );
 define( 'ARTIST_DIRECTORY_PLUGIN_FILE', __FILE__ );
 define( 'ARTIST_DIRECTORY_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );

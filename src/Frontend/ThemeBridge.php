@@ -3,6 +3,7 @@ namespace ArtistDirectory\Frontend;
 
 use ArtistDirectory\Contracts\Service;
 use ArtistDirectory\Infrastructure\PluginContext;
+use ArtistDirectory\Settings\DirectorySettings;
 use DirectoryCore\Integration\CoreApi;
 use Twig\Markup;
 use WP_Query;
@@ -67,8 +68,8 @@ class ThemeBridge implements Service {
 		global $wp_query;
 
 		$selected_media = $this->getSelectedMedia();
-		$current_view   = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'cards';
-		$current_view   = in_array( $current_view, array( 'cards', 'text' ), true ) ? $current_view : 'cards';
+		$current_view   = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : DirectorySettings::getDefaultView();
+		$current_view   = in_array( $current_view, array( 'cards', 'text' ), true ) ? $current_view : DirectorySettings::getDefaultView();
 		$media_terms    = get_terms(
 			array(
 				'taxonomy'   => 'mw_media',
@@ -84,6 +85,7 @@ class ThemeBridge implements Service {
 		}
 		$cards_url = add_query_arg( array_merge( $toggle_params, array( 'view' => 'cards' ) ), $archive_url );
 		$text_url  = add_query_arg( array_merge( $toggle_params, array( 'view' => 'text' ) ), $archive_url );
+		$reset_url = add_query_arg( array( 'view' => $current_view ), $archive_url );
 		$artists   = array();
 
 		foreach ( $wp_query->posts as $artist_post ) {
@@ -122,26 +124,51 @@ class ThemeBridge implements Service {
 				<form method="get" class="artist-directory__filter-form">
 					<input type="hidden" name="view" value="<?php echo esc_attr( $current_view ); ?>">
 					<div class="artist-directory__toolbar">
-						<div class="artist-directory__view-toggle" aria-label="<?php esc_attr_e( 'Directory view', 'artist-directory' ); ?>">
-							<a class="<?php echo 'cards' === $current_view ? 'is-active' : ''; ?>" href="<?php echo esc_url( $cards_url ); ?>"><?php esc_html_e( 'Cards', 'artist-directory' ); ?></a>
-							<a class="<?php echo 'text' === $current_view ? 'is-active' : ''; ?>" href="<?php echo esc_url( $text_url ); ?>"><?php esc_html_e( 'Text', 'artist-directory' ); ?></a>
-						</div>
-					</div>
-					<div class="artist-directory__filter-row">
-						<span class="artist-directory__filter-label"><?php esc_html_e( 'Filter by media', 'artist-directory' ); ?></span>
-						<div class="artist-directory__chips">
-							<?php if ( is_array( $media_terms ) ) : ?>
-								<?php foreach ( $media_terms as $media_term ) : ?>
-									<label class="artist-directory__chip">
-										<input type="checkbox" name="media[]" value="<?php echo esc_attr( $media_term->slug ); ?>" <?php checked( in_array( $media_term->slug, $selected_media, true ), true ); ?>>
-										<span><?php echo esc_html( $media_term->name ); ?></span>
-									</label>
-								<?php endforeach; ?>
+						<div class="artist-directory__filter-controls">
+							<span class="artist-directory__filter-label"><?php esc_html_e( 'Filters', 'artist-directory' ); ?></span>
+							<details class="artist-directory__filter-menu">
+								<summary>
+									<span><?php esc_html_e( 'Media', 'artist-directory' ); ?></span>
+									<?php if ( ! empty( $selected_media ) ) : ?>
+										<small><?php echo esc_html( count( $selected_media ) ); ?></small>
+									<?php endif; ?>
+								</summary>
+								<div class="artist-directory__filter-popover">
+									<?php if ( is_array( $media_terms ) ) : ?>
+										<?php foreach ( $media_terms as $media_term ) : ?>
+											<label class="artist-directory__filter-option">
+												<input type="checkbox" name="media[]" value="<?php echo esc_attr( $media_term->slug ); ?>" <?php checked( in_array( $media_term->slug, $selected_media, true ), true ); ?>>
+												<span><?php echo esc_html( $media_term->name ); ?></span>
+											</label>
+										<?php endforeach; ?>
+									<?php endif; ?>
+								</div>
+							</details>
+							<?php if ( ! empty( $selected_media ) && is_array( $media_terms ) ) : ?>
+								<div class="artist-directory__active-filters" aria-label="<?php esc_attr_e( 'Active media filters', 'artist-directory' ); ?>">
+									<?php foreach ( $media_terms as $media_term ) : ?>
+										<?php if ( ! in_array( $media_term->slug, $selected_media, true ) ) : ?>
+											<?php continue; ?>
+										<?php endif; ?>
+										<?php $remaining_media = array_values( array_diff( $selected_media, array( $media_term->slug ) ) ); ?>
+										<?php $remove_url = empty( $remaining_media ) ? add_query_arg( array( 'view' => $current_view ), $archive_url ) : add_query_arg( array( 'view' => $current_view, 'media' => $remaining_media ), $archive_url ); ?>
+										<a class="artist-directory__active-chip" href="<?php echo esc_url( $remove_url ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Remove %s filter', 'artist-directory' ), $media_term->name ) ); ?>">
+											<span><?php echo esc_html( $media_term->name ); ?></span>
+											<span aria-hidden="true">x</span>
+										</a>
+									<?php endforeach; ?>
+								</div>
 							<?php endif; ?>
 						</div>
-					</div>
-					<div class="artist-directory__filter-actions">
-						<a href="<?php echo esc_url( $archive_url ); ?>" class="artist-directory__button artist-directory__button--ghost"><?php esc_html_e( 'Reset', 'artist-directory' ); ?></a>
+						<div class="artist-directory__toolbar-actions">
+							<div class="artist-directory__view-toggle" aria-label="<?php esc_attr_e( 'Directory view', 'artist-directory' ); ?>">
+								<a class="<?php echo 'cards' === $current_view ? 'is-active' : ''; ?>" href="<?php echo esc_url( $cards_url ); ?>"><?php esc_html_e( 'Cards', 'artist-directory' ); ?></a>
+								<a class="<?php echo 'text' === $current_view ? 'is-active' : ''; ?>" href="<?php echo esc_url( $text_url ); ?>"><?php esc_html_e( 'Text', 'artist-directory' ); ?></a>
+							</div>
+							<?php if ( ! empty( $selected_media ) ) : ?>
+								<a href="<?php echo esc_url( $reset_url ); ?>" class="artist-directory__button artist-directory__button--ghost"><?php esc_html_e( 'Reset', 'artist-directory' ); ?></a>
+							<?php endif; ?>
+						</div>
 					</div>
 				</form>
 			</div>
@@ -156,12 +183,27 @@ class ThemeBridge implements Service {
 									<h2><?php echo esc_html( $initial ); ?></h2>
 									<ul>
 										<?php foreach ( $group_artists as $artist ) : ?>
-											<li>
+											<li class="artist-directory__text-item">
 												<?php if ( $artist['can_view'] ) : ?>
-													<a href="<?php echo esc_url( $artist['url'] ); ?>"><?php echo esc_html( $artist['name'] ); ?></a>
+													<a class="artist-directory__text-link" href="<?php echo esc_url( $artist['url'] ); ?>"><?php echo esc_html( $artist['name'] ); ?></a>
 												<?php else : ?>
-													<span><?php echo esc_html( $artist['name'] ); ?></span>
+													<span class="artist-directory__text-link" tabindex="0"><?php echo esc_html( $artist['name'] ); ?></span>
 												<?php endif; ?>
+												<div class="artist-directory__text-preview" aria-hidden="true">
+													<div class="artist-directory__text-preview-media">
+														<?php if ( $artist['image_html'] ) : ?>
+															<?php echo $artist['image_html']; ?>
+														<?php else : ?>
+															<div class="artist-card__placeholder"></div>
+														<?php endif; ?>
+													</div>
+													<div class="artist-directory__text-preview-body">
+														<strong><?php echo esc_html( $artist['name'] ); ?></strong>
+														<?php if ( ! empty( $artist['media'] ) ) : ?>
+															<span><?php echo esc_html( implode( ' / ', $artist['media'] ) ); ?></span>
+														<?php endif; ?>
+													</div>
+												</div>
 											</li>
 										<?php endforeach; ?>
 									</ul>
@@ -203,7 +245,7 @@ class ThemeBridge implements Service {
 		return array(
 			'mw_template' => 'artist-directory/archive-mw-artist.twig',
 			'page'        => array(
-				'class' => 'artist-directory artist-directory--archive artist-directory--view-' . $current_view,
+				'class' => 'artist-directory artist-directory--archive ' . DirectorySettings::getThemeClass() . ' artist-directory--view-' . $current_view,
 			),
 			'hero'        => array(
 				'kicker'   => __( 'Artist Directory', 'artist-directory' ),
@@ -266,7 +308,7 @@ class ThemeBridge implements Service {
 		return array(
 			'mw_template' => 'artist-directory/single-mw-artist.twig',
 			'page'        => array(
-				'class' => 'artist-directory artist-directory--single',
+				'class' => 'artist-directory artist-directory--single ' . DirectorySettings::getThemeClass(),
 			),
 			'hero'        => array(
 				'kicker'   => __( 'Artist Profile', 'artist-directory' ),
@@ -350,7 +392,7 @@ class ThemeBridge implements Service {
 				sprintf(
 					'<p>%1$s</p><p><a href="%2$s">%3$s</a></p>',
 					esc_html__( 'That artist profile is not publicly available.', 'artist-directory' ),
-					esc_url( (string) get_post_type_archive_link( 'mw_artist' ) ),
+					esc_url( DirectorySettings::getDirectoryUrl() ),
 					esc_html__( 'Return to the artist directory', 'artist-directory' )
 				)
 			),
