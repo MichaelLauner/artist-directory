@@ -50,6 +50,26 @@ class SettingsPage implements Service {
 				'default'           => 'cards',
 			)
 		);
+
+		register_setting(
+			'artist_directory_settings',
+			DirectorySettings::OPTION_VISIBLE_TAXONOMIES,
+			array(
+				'type'              => 'array',
+				'sanitize_callback' => array( DirectorySettings::class, 'sanitizeVisibleTaxonomies' ),
+				'default'           => array_keys( DirectorySettings::discoveryTaxonomyLabels() ),
+			)
+		);
+
+		register_setting(
+			'artist_directory_settings',
+			DirectorySettings::OPTION_CROP_CARD_IMAGES,
+			array(
+				'type'              => 'boolean',
+				'sanitize_callback' => array( DirectorySettings::class, 'sanitizeBoolean' ),
+				'default'           => true,
+			)
+		);
 	}
 
 	public function registerMenuPage(): void {
@@ -68,6 +88,8 @@ class SettingsPage implements Service {
 		$directory_url    = DirectorySettings::getDirectoryUrl();
 		$style_mode       = DirectorySettings::getStyleMode();
 		$default_view     = DirectorySettings::getDefaultView();
+		$visible_taxonomies = DirectorySettings::getVisibleTaxonomies();
+		$crop_card_images = DirectorySettings::shouldCropCardImages();
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Artist Directory Settings', $this->context->textDomain() ); ?></h1>
@@ -133,6 +155,40 @@ class SettingsPage implements Service {
 							</select>
 							<p class="description">
 								<?php esc_html_e( 'Choose which view visitors see first when the URL does not include a view parameter.', $this->context->textDomain() ); ?>
+							</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">
+							<?php esc_html_e( 'Card images', $this->context->textDomain() ); ?>
+						</th>
+						<td>
+							<label for="<?php echo esc_attr( DirectorySettings::OPTION_CROP_CARD_IMAGES ); ?>">
+								<input type="hidden" name="<?php echo esc_attr( DirectorySettings::OPTION_CROP_CARD_IMAGES ); ?>" value="0">
+								<input type="checkbox" name="<?php echo esc_attr( DirectorySettings::OPTION_CROP_CARD_IMAGES ); ?>" id="<?php echo esc_attr( DirectorySettings::OPTION_CROP_CARD_IMAGES ); ?>" value="1" <?php checked( $crop_card_images, true ); ?>>
+								<?php esc_html_e( 'Crop images to a consistent card shape', $this->context->textDomain() ); ?>
+							</label>
+							<p class="description">
+								<?php esc_html_e( 'When disabled, card images keep their original proportions and are not clipped.', $this->context->textDomain() ); ?>
+							</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">
+							<?php esc_html_e( 'Profile taxonomy sections', $this->context->textDomain() ); ?>
+						</th>
+						<td>
+							<fieldset>
+								<legend class="screen-reader-text"><?php esc_html_e( 'Profile taxonomy sections', $this->context->textDomain() ); ?></legend>
+								<?php foreach ( DirectorySettings::discoveryTaxonomyLabels() as $taxonomy => $label ) : ?>
+									<label>
+										<input type="checkbox" name="<?php echo esc_attr( DirectorySettings::OPTION_VISIBLE_TAXONOMIES ); ?>[]" value="<?php echo esc_attr( $taxonomy ); ?>" <?php checked( in_array( $taxonomy, $visible_taxonomies, true ), true ); ?>>
+										<?php echo esc_html( $label ); ?>
+									</label><br>
+								<?php endforeach; ?>
+							</fieldset>
+							<p class="description">
+								<?php esc_html_e( 'Choose which discovery taxonomy sections appear on public artist profile pages when terms are assigned.', $this->context->textDomain() ); ?>
 							</p>
 						</td>
 					</tr>

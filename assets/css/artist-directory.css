@@ -308,12 +308,19 @@
 }
 
 .artist-card {
-	display: grid;
-	grid-template-rows: 18rem auto;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
 	color: var(--ad-ink);
 	text-decoration: none;
 	border-top: 1px solid var(--ad-border);
 	padding-top: 0.85rem;
+}
+
+.artist-directory--card-images-cropped .artist-card {
+	display: grid;
+	grid-template-rows: auto auto;
+	height: auto;
 }
 
 .artist-card--link:hover .artist-card__title {
@@ -330,6 +337,14 @@
 	align-items: flex-end;
 	justify-content: center;
 	width: 100%;
+	flex: 1 1 auto;
+	overflow: visible;
+}
+
+.artist-directory--card-images-cropped .artist-card__media {
+	align-items: stretch;
+	aspect-ratio: 4 / 5;
+	height: auto;
 	overflow: hidden;
 }
 
@@ -345,6 +360,14 @@
 	display: block;
 	width: 100%;
 	height: auto;
+	max-height: none;
+}
+
+.artist-directory--card-images-cropped .artist-card__media img {
+	width: 100%;
+	max-height: none;
+	height: 100%;
+	object-fit: cover;
 }
 
 .artist-card__placeholder {
@@ -359,6 +382,7 @@
 
 .artist-card__body {
 	display: grid;
+	flex: 0 0 auto;
 	gap: 0.4rem;
 	padding: 0.85rem 0 0;
 }

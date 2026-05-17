@@ -31,6 +31,18 @@ $related_venue_ids  = CoreApi::sanitizeIdList( get_post_meta( $artist_id, 'mw_re
 $profile_artwork_ids = CoreApi::sanitizeIdList( get_post_meta( $artist_id, 'mw_profile_artwork_ids', true ) );
 $featured_id        = (int) get_post_thumbnail_id( $artist_id );
 $directory_url      = DirectorySettings::getDirectoryUrl();
+$contact_preference = (string) get_post_meta( $artist_id, 'mw_artist_contact_preference', true );
+$public_email       = (string) get_post_meta( $artist_id, 'mw_artist_public_email', true );
+$website_url        = (string) get_post_meta( $artist_id, 'mw_artist_website_url', true );
+$instagram_url      = (string) get_post_meta( $artist_id, 'mw_artist_instagram_url', true );
+$accepting_inquiries = (string) get_post_meta( $artist_id, 'mw_artist_accepting_inquiries', true );
+$discovery_terms    = array();
+
+foreach ( DirectorySettings::discoveryTaxonomyLabels() as $taxonomy => $label ) {
+	if ( DirectorySettings::isTaxonomyVisible( $taxonomy ) ) {
+		$discovery_terms[ $label ] = wp_get_post_terms( $artist_id, $taxonomy, array( 'fields' => 'names' ) );
+	}
+}
 
 if ( $featured_id > 0 ) {
 	$profile_artwork_ids = array_values( array_diff( $profile_artwork_ids, array( $featured_id ) ) );
@@ -64,6 +76,35 @@ if ( $featured_id > 0 ) {
 				</div>
 
 				<aside class="artist-profile__sidebar">
+					<?php if ( $website_url || $instagram_url || ( 'direct_email' === $contact_preference && $public_email ) || $accepting_inquiries ) : ?>
+						<section class="artist-profile__panel">
+							<h3 class="artist-profile__panel-title"><?php esc_html_e( 'Contact & Links', 'artist-directory' ); ?></h3>
+							<ul>
+								<?php if ( $website_url ) : ?>
+									<li><a href="<?php echo esc_url( $website_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Website', 'artist-directory' ); ?></a></li>
+								<?php endif; ?>
+								<?php if ( $instagram_url ) : ?>
+									<li><a href="<?php echo esc_url( $instagram_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Social profile', 'artist-directory' ); ?></a></li>
+								<?php endif; ?>
+								<?php if ( 'direct_email' === $contact_preference && $public_email ) : ?>
+									<li><a href="mailto:<?php echo esc_attr( $public_email ); ?>"><?php esc_html_e( 'Email artist', 'artist-directory' ); ?></a></li>
+								<?php endif; ?>
+								<?php if ( $accepting_inquiries ) : ?>
+									<li><?php echo esc_html( sprintf( __( 'Accepting inquiries: %s', 'artist-directory' ), ucfirst( $accepting_inquiries ) ) ); ?></li>
+								<?php endif; ?>
+							</ul>
+						</section>
+					<?php endif; ?>
+
+					<?php foreach ( $discovery_terms as $label => $terms ) : ?>
+						<?php if ( ! empty( $terms ) && is_array( $terms ) ) : ?>
+							<section class="artist-profile__panel">
+								<h3 class="artist-profile__panel-title"><?php echo esc_html( $label ); ?></h3>
+								<p><?php echo esc_html( implode( ' / ', $terms ) ); ?></p>
+							</section>
+						<?php endif; ?>
+					<?php endforeach; ?>
+
 					<?php if ( ! empty( $related_venue_ids ) ) : ?>
 						<section class="artist-profile__panel">
 							<h3 class="artist-profile__panel-title"><?php esc_html_e( 'Related Venues', 'artist-directory' ); ?></h3>

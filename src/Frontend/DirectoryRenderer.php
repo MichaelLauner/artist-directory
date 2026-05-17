@@ -33,7 +33,7 @@ class DirectoryRenderer {
 
 		ob_start();
 		?>
-		<div class="artist-directory artist-directory--archive <?php echo esc_attr( DirectorySettings::getThemeClass() ); ?> artist-directory--view-<?php echo esc_attr( $current_view ); ?>">
+		<div class="artist-directory artist-directory--archive <?php echo esc_attr( DirectorySettings::getThemeClass() ); ?> <?php echo esc_attr( DirectorySettings::getCardImageClass() ); ?> artist-directory--view-<?php echo esc_attr( $current_view ); ?>">
 			<section class="artist-directory__filters">
 				<div class="artist-directory__inner">
 					<form method="get" class="artist-directory__filter-form">

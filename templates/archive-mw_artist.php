@@ -62,7 +62,7 @@ ksort( $artist_groups );
 
 get_header();
 ?>
-<main class="artist-directory artist-directory--archive <?php echo esc_attr( DirectorySettings::getThemeClass() ); ?> artist-directory--view-<?php echo esc_attr( $current_view ); ?>">
+<main class="artist-directory artist-directory--archive <?php echo esc_attr( DirectorySettings::getThemeClass() ); ?> <?php echo esc_attr( DirectorySettings::getCardImageClass() ); ?> artist-directory--view-<?php echo esc_attr( $current_view ); ?>">
 	<section class="artist-directory__hero">
 		<div class="artist-directory__inner">
 			<p class="artist-directory__eyebrow"><?php esc_html_e( 'Artist Directory', 'artist-directory' ); ?></p>
