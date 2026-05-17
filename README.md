@@ -4,6 +4,8 @@ Public artist directory templates and filtering powered by Directory Core.
 
 Publisher: Mostly Wanted
 
+Status: Beta (`0.1.10-beta.1`). This plugin is public for collaboration and client testing, but the display options, templates, and submission/approval roadmap are still evolving.
+
 ## Current Scope
 
 - public artist archive

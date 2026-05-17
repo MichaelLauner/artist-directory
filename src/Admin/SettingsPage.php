@@ -4,11 +4,9 @@ namespace ArtistDirectory\Admin;
 use ArtistDirectory\Contracts\Service;
 use ArtistDirectory\Infrastructure\PluginContext;
 use ArtistDirectory\Settings\DirectorySettings;
-use DirectoryCore\Integration\CoreApi;
+use DirectoryCore\Admin\SettingsHub;
 
 class SettingsPage implements Service {
-	private const PAGE_SLUG = 'artist-directory-settings';
-
 	private PluginContext $context;
 
 	public function __construct( PluginContext $context ) {
@@ -17,7 +15,8 @@ class SettingsPage implements Service {
 
 	public function register(): void {
 		add_action( 'admin_init', array( $this, 'registerSettings' ) );
-		add_action( 'admin_menu', array( $this, 'registerMenuPage' ) );
+		add_filter( SettingsHub::TABS_FILTER, array( $this, 'registerSettingsTab' ) );
+		add_action( SettingsHub::RENDER_ACTION_PREFIX . 'artist-directory', array( $this, 'renderSettingsPage' ) );
 	}
 
 	public function registerSettings(): void {
@@ -72,15 +71,13 @@ class SettingsPage implements Service {
 		);
 	}
 
-	public function registerMenuPage(): void {
-		add_submenu_page(
-			CoreApi::adminMenuSlug(),
-			__( 'Artist Directory Settings', $this->context->textDomain() ),
-			__( 'Artist Directory', $this->context->textDomain() ),
-			'manage_options',
-			self::PAGE_SLUG,
-			array( $this, 'renderSettingsPage' )
+	public function registerSettingsTab( array $tabs ): array {
+		$tabs['artist-directory'] = array(
+			'label'    => __( 'Artist Directory', $this->context->textDomain() ),
+			'priority' => 20,
 		);
+
+		return $tabs;
 	}
 
 	public function renderSettingsPage(): void {
@@ -91,8 +88,8 @@ class SettingsPage implements Service {
 		$visible_taxonomies = DirectorySettings::getVisibleTaxonomies();
 		$crop_card_images = DirectorySettings::shouldCropCardImages();
 		?>
-		<div class="wrap">
-			<h1><?php esc_html_e( 'Artist Directory Settings', $this->context->textDomain() ); ?></h1>
+		<div>
+			<h2><?php esc_html_e( 'Artist Directory', $this->context->textDomain() ); ?></h2>
 			<form method="post" action="options.php">
 				<?php settings_fields( 'artist_directory_settings' ); ?>
 				<table class="form-table" role="presentation">
